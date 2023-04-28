@@ -1,12 +1,12 @@
 # DashboardTester
-DashboardTester is an Rselenium script for simulating users on the ChatDashboard webapps. It can use self-exported and simulated chat logs for testing purposes and is written for the structure of the [default configuration of ChatDashboard](https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id=ShowCaseUser). Should you want to test an instance of ChatDashboard that you adapted, you might need to adapt DashboardTester accordingly. The scripts simulates research participants uploading, subsetting, and donating data, and enables to test if
+DashboardTester is an RSelenium script for simulating users on the ChatDashboard webapps. It can use self-exported and simulated chat logs for testing purposes and is written for the structure of the [default configuration of ChatDashboard](https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id=ShowCaseUser). Should you want to test an instance of ChatDashboard that you adapted, you might need to adapt DashboardTester accordingly. The scripts simulates research participants uploading, subsetting, and donating data, and enables to test if
  - a) All Personal Identifiable Information (PII) is reliably removed from donated datasets
  - b) Data not manually selected for data donation is not contained in the donations.
 
 ## Setup
 
 #### ChatDashboard Settings
-After installing all necessary dependencies, you can simply open the `RunningSimulation.R` file and follow the instructions to run the simulation of participants. Before running the script, please ensure that the following requirements are met:
+Before using Dashboardtester, please ensure that the following requirements are met:
 
  - You have an instance of ChatDashboard running on an online server
  - The ChatDashboard instance is configured with `save_to_server = TRUE` and `use_forwarding = TRUE`
@@ -89,3 +89,4 @@ Here are some issues that might pop up and their most likely causes.
  - **I get errors that specific files and folders do not exist:** Please check that you set the working directory to the source file location in `RunningSimulation.R`. Also ensure that you placed the .txt files to be uploaded by simulated participants in the `UploadData` folder before running the simulation, and that your RSA keys and the encrypted data donations are in the correct folders before running the analysis script. In addition, check if all file paths in the scripts correspond to the correct structure for file paths on your operating system.
  - **I can't decrypt the encrypted data donations:** Please ensure that you are using the correct RSA keypair in the `DecrpytionKeypair` folder, that correpsonds to the one used on the ChatDashboard instance your are testing.
  - **I get errors in the analysis script:** Please make sure that the column names used in the analysis script correspond to the column names of your data donations.
+ - **There are no files on the server after the simulation**: Please check that you are looking in the correct folder (`UserData`) onm the server and that your ChatDashboard instance (the `app.R` file on the server) is configured with `save_to_server = TRUE`.
