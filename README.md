@@ -21,7 +21,7 @@ have installed `WhatsR` and the dependencies for `ChatDashboard`, you should alr
 ```R
 # Installing DashboardTester dependencies
 # code form: https://stackoverflow.com/questions/4090169/elegant-way-to-check-for-missing-packages-and-install-them
-DashbaordTester_dep <- c("cyphr",
+DashboardTester_dep <- c("cyphr",
                          "data.table",
                          "WhatsR",
                          "RSelenium",
