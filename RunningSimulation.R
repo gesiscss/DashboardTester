@@ -1,8 +1,5 @@
 #### Script for running a simulation of participants on a ChatDashboard instance 
 
-# Tutorial for using RSelenium:
-# https://www.youtube.com/watch?v=WRjKyCZsbE4
-
 ##### setup
 
 # garbage collector to close potentially remaining RSelenium connections before initiating a new one
@@ -12,7 +9,7 @@ gc()
 #setwd("SOURCE FILE DIRECTORY")
 
 # number of users to simulate (simulating 1 user takes several minutes)
-simulate_n_users = 15
+simulate_n_users = 1
 
 # loading necessary packages (install first if not available)
 require(WhatsR)
@@ -20,8 +17,46 @@ require(RSelenium)
 require(tidyverse)
 require(rvest)
 
+
+##### setting simulation parameters (passed to SimulateChatDashboardParticipant())
+
+# set the url where your ChatDashboard instance is running (including the forwarding parameter)
+url_set = "https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id="
+
+# set the id that the simulated participant should use to log in to the ChatDashboard
+id_set = "SimulatedParticipant"
+
+# set the password the simulated participant should use to log in to the ChatDashboard
+pw_set = "password"
+
+# set the web driver used by R Selenium to simulate the participant
+browser_set = "chrome"
+
+# set the chromeversion used to simulate the participant, passed to chreomver paramter in RSelenium::rsDriver()
+version_set = "112.0.5615.49"
+
+# set thew port used to simulate the participant, must be valid and available
+port_set = 4567L
+
+# set the file path for the chat logs to be uploaded by simulated participants
+filePath_set = "./UploadData"
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### running simulation
+
 # sourcing simulation function
-source("./SimulationFunction.R")
+source("./SimulateChatDashboardParticipant.R")
 
 # initiating empty list for storing simulation results
 SimulationResults <- list()
@@ -31,15 +66,13 @@ SimulationResults <- list()
 for (i in 1:simulate_n_users) {
   
   # simulation loop
-  SimulationResults[[i]]  <- SimulateChatDashboardParticipant(url = "https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id=", # url of the ChatDashboard instance you want to test,
-                                                              # e.g. https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id=
-                                                              id = "SimulatedParticipant", # Name for the simulated participant, will be appended to the /?id= part of the url and used as a username
-                                                              pw = "password", # Password for accessing the ChatDashboard instance
-                                                              browser = "chrome", # Webbrowser to use for simulating participants
-                                                              version = "112.0.5615.49", # version of webdriver to use, this needs to match a browser version currently installed on your system
-                                                              port = 4567L, # port to use for RSelenium session
-                                                              filePath = "/home/juko/Desktop/GoogleDrive/Dissertation/Infrastruktur_Studie_1/Sharing/DashboardTester/UploadData" # path to folder containing the files a simulated participant might upload. Can be generated
-                                                              # using the create_chatlog() function in the WhatsR package.
+  SimulationResults[[i]]  <- SimulateChatDashboardParticipant(url = url_set,
+                                                              id = id_set,
+                                                              pw = pw_set,
+                                                              browser = browser_set,
+                                                              version = version_set,
+                                                              port = port_set,
+                                                              filePath = filePath_set,
                                                               )
   
   # print info
