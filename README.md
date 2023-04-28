@@ -5,6 +5,22 @@ DashboardTester is an RSelenium script for simulating users on the ChatDashboard
  - a) All Personal Identifiable Information (PII) is reliably removed from donated datasets
  - b) Data not manually selected for data donation is not contained in the donations.
 
+## Scientifc Use
+If you are using DashboardTester in your research, please cite it accordingly:
+```R
+@software{julian_kohne_2023_7875924,
+  author       = {Julian Kohne},
+  title        = {{DashboardTester: Scripts for simulating and 
+                   analyzing Participants on ChatDashboard}},
+  month        = apr,
+  year         = 2023,
+  publisher    = {Zenodo},
+  version      = {v1.0.0},
+  doi          = {10.5281/zenodo.7875924},
+  url          = {https://doi.org/10.5281/zenodo.7875924}
+}
+```
+
 ## Setup
 
 #### ChatDashboard Settings
