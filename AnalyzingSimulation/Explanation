@@ -1,0 +1,6 @@
+This folder contains the following files and folders:
+
+- TestData: Folder containing the downloaded, donated datasets from your simulated users. These are encrypted with the public key of the researcher
+- AnalyzingUserTesting.R: R-script for decrypting and analyzing simulated donated datasets and user behavior. Allows to test whether no PII is contained and only columns selcted by users are present in donated chatlogs
+- id_rsa: Private RSA key of the researcher, allows decrpyting simulated donated chatlogs. This should always be kept confidential and never be shared
+- id_rsa.pub: Public key of the shiny app, the file is necessary for decrpytion but not confidential
