@@ -4,7 +4,7 @@
 # https://www.youtube.com/watch?v=WRjKyCZsbE4
 
 SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # url of the ChatDashboard instance you want to test,
-                                             # e.g. https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id=
+                                             # e.g. https://l.linklyhq.com/l/1kUiI/?id=
                                              id = "SimulatedParticipant", # Name for the simulated participant, will be appended to the /?id= part of the url and used as a username
                                              pw = "password", # Password for accessing the ChatDashboard instance
                                              browser = "chrome", # web driver for simulating participants
