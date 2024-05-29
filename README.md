@@ -5,18 +5,23 @@ DashboardTester is an RSelenium script for simulating users on the [ChatDashboar
  - b) Data not manually selected for data donation is not contained in the donations.
 
 ## Scientifc Use
-If you are using DashboardTester in your research, please cite it accordingly:
+If you are using DashboardTester in your research, please cite the corresponding paper accordingly:
+
 ```R
-@software{julian_kohne_2023_7875924,
-  author       = {Julian Kohne},
-  title        = {{DashboardTester: Scripts for simulating and 
-                   analyzing Participants on ChatDashboard}},
-  month        = apr,
-  year         = 2023,
-  publisher    = {Zenodo},
-  version      = {v1.0.0},
-  doi          = {10.5281/zenodo.7875924},
-  url          = {https://doi.org/10.5281/zenodo.7875924}
+Kohne, J., Montag, C. ChatDashboard: A Framework to collect, link, and process donated WhatsApp Chat Log Data. Behav Res 56, 3658–3684 (2024). https://doi.org/10.3758/s13428-023-02276-1
+
+A BibTeX entry for LaTeX users is
+
+@article{kohne2024chatdashboard,
+  title={Chat{D}ashboard: {A} {F}ramework to collect, link, and process donated {W}hats{A}pp {C}hat {L}og {D}ata},
+  author={Kohne, Julian and Montag, Christian},
+  journal={Behavior Research Methods},
+  volume={56},
+  number = {4},
+  pages={3658--3684},
+  year={2024},
+  publisher={Springer},
+  doi={10.3758/s13428-023-02276-1}
 }
 ```
 
