@@ -1,0 +1,6 @@
+UploadData/**
+AnalyzingSimulation/DecryptionKeypair/**
+AnalyzingSimulation/SimulatedDonations/**
+AnalyzingSimulation/SimulationLogs/**
+id_rsa
+id_rsa.pub
