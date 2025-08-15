@@ -30,11 +30,13 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     filePath <- normalizePath(filePath, winslash = "/", mustWork = TRUE)
     
     # Initializing output list (settings and simulated participant behavior)
-    Output <- list(Setup = c(url,id,pw,browser, version, port, filePath,time_start = Sys.time(),time_finish = NA),
-                   UserActions = NA,
-                   SelectedColumns = NA,
-                   ExcludedRows = NA,
-                   ServersideMessages = NA)
+    Output <- list(
+      Setup = c(url,id,pw,browser,version,port,filePath,time_start = Sys.time(), time_finish = NA),
+      UserActions = character(),
+      SelectedColumns = NA,
+      ExcludedRows = NA,          # numeric bucket
+      ServersideMessages = character()
+    )
     
     
     #### Setting up web driver quietly ####
@@ -101,10 +103,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     # click processing button
     retry({ remDr$findElement("id", "submit")$clickElement() })
     Output[[2]] <- c(Output[[2]],"File processing button clicked")
-    Sys.sleep(10)
+    Sys.sleep(15)
     
     # Select random chat donor
-    Sys.sleep(3)
+    Sys.sleep(5)
     retry({ remDr$findElement("id", "person_select-selectized")$clickElement() })
     retry({
       opts <- remDr$findElements("css selector", ".selectize-dropdown-content .option[data-selectable]")
@@ -125,23 +127,43 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ##### SELECTING COLUMNS FUNCTION ####
     
     Column_select <- function(){
-      
       # open dropdown
       retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
       
-      # get current menu id (e.g., bs-select-3, but dynamic)
-      menu   <- remDr$findElement("css selector", "div[id^='bs-select-'][role='listbox']")
+      # dynamic menu id
+      menu    <- remDr$findElement("css selector", "div[id^='bs-select-'][role='listbox']")
       menu_id <- menu$getElementAttribute("id")[[1]]
       
-      # options under this menu: second span holds the label
-      opt_xpath <- sprintf('//*[@id="%s"]//li/a/span[2]', menu_id)
+      # parse current selection
+      src <- remDr$getPageSource()[[1]]
+      doc <- xml2::read_html(src)
+      ul  <- rvest::html_node(doc, xpath = sprintf('//*[@id="%s"]/ul', menu_id))
+      lis <- rvest::html_children(ul)                             # <li> nodes
+      is_sel <- as.character(rvest::html_attrs(lis)) == "selected"
+      sel_idx <- which(is_sel); n_sel <- length(sel_idx)
       
-      # choose random options
-      opts <- remDr$findElements("xpath", opt_xpath)
-      n <- length(opts); if (n == 0L) return(invisible(NULL))
-      picks <- sample.int(n, size = min(n, sample(1:50, 1)), replace = TRUE)
+      # plan minimal changes: may deselect but never drop below 2 selected
+      max_desel <- max(0, n_sel - 2)
+      n_desel   <- if (max_desel > 0) sample(0:max_desel, 1) else 0
+      desel_idx <- if (n_desel > 0) sample(sel_idx, n_desel) else integer(0)
       
-      # click each, re-finding before every click to avoid stale refs
+      candidates <- which(!is_sel)
+      n_add_max  <- min(length(candidates), 50)
+      n_add      <- if (n_add_max > 0) sample(0:n_add_max, 1) else 0
+      add_idx    <- if (n_add > 0) sample(candidates, n_add, replace = FALSE) else integer(0)
+      
+      picks <- c(desel_idx, add_idx)
+      if (!length(picks)) {
+        retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
+        # log current selection and exit
+        Selected_columns <- rvest::html_text(lis)[is_sel]
+        Output[[2]] <<- c(Output[[2]], "Selected Columns")
+        Output[[3]] <<- c(Output[[3]], Selected_columns, NA)
+        return(invisible(NULL))
+      }
+      
+      # click each option (toggle) – click the <a> under each <li>
+      opt_xpath <- sprintf('//*[@id="%s"]//li/a', menu_id)
       for (j in picks) {
         retry({ remDr$findElements("xpath", opt_xpath)[[j]]$clickElement() })
         Sys.sleep(0.2)
@@ -152,23 +174,25 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       # close dropdown
       retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
       
-      # log selection using the same dynamic id
-      Output[[2]] <- c(Output[[2]], "Selected Columns")
-      page_colsel_xpath <- sprintf('//*[@id="%s"]/ul', menu_id)
-      doc_pages_colsel  <- read_html(remDr$getPageSource()[[1]])
-      children_colsel_pages <- doc_pages_colsel %>%
-        html_node(xpath = page_colsel_xpath) %>%
-        html_children()
-      Selected_columns <- html_text(children_colsel_pages)[as.character(html_attrs(children_colsel_pages)) == "selected"]
-      Output[[3]] <- c(Output[[3]], Selected_columns, NA)
+      # log final selected labels
+      src2 <- remDr$getPageSource()[[1]]
+      doc2 <- xml2::read_html(src2)
+      ul2  <- rvest::html_node(doc2, xpath = sprintf('//*[@id="%s"]/ul', menu_id))
+      lis2 <- rvest::html_children(ul2)
+      is_sel2 <- as.character(rvest::html_attrs(lis2)) == "selected"
+      labels <- rvest::html_text(lis2)[is_sel2]
+      
+      Output[[2]] <<- c(Output[[2]], "Selected Columns")
+      Output[[3]] <<- c(Output[[3]], labels, NA)
     }
+    
+    
     
     
     ##### SELECTING ROWS FUNCTION ####
     
     # Function for selecting rows and excluding them
     Row_select <- function(){
-      # paginator buttons except prev/next/current
       pags <- remDr$findElements(
         "css selector",
         ".dataTables_paginate a.paginate_button:not(.previous):not(.next):not(.current)"
@@ -178,21 +202,18 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       
       cells_css <- "#frame tbody tr:not(.dataTables_empty) td:first-child"
       rows_css  <- "#frame tbody tr:not(.dataTables_empty)"
+      excluded_abs <- integer(0)
       
       click_rows_and_remove <- function(){
-        # wait until cells exist
         for (t in 1:40) {
           if (length(remDr$findElements("css selector", cells_css)) > 0) break
           Sys.sleep(0.1)
         }
-        
-        # pick k targets
         cells <- remDr$findElements("css selector", cells_css)
         n <- length(cells); if (n == 0L) return(invisible(NULL))
         k <- max(1, min(n, floor(n/3)))
         idx <- sample.int(n, k)
         
-        # click chosen cells; re-find each time
         for (j in idx) {
           retry({
             el <- remDr$findElements("css selector", cells_css)[[j]]
@@ -201,11 +222,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
           })
           Sys.sleep(0.1)
         }
-        
-        # ensure selection occurred; fallback to clicking rows if needed
-        sel_n <- remDr$executeScript(
-          "return document.querySelectorAll('#frame tbody tr.selected').length;", list())[[1]]
-        if (is.null(sel_n) || sel_n == 0) {
+        if (length(remDr$findElements("css selector", "#frame tbody tr.selected")) == 0) {
           for (j in idx) {
             retry({
               el <- remDr$findElements("css selector", rows_css)[[j]]
@@ -216,22 +233,24 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
           }
         }
         
-        # exclude
-        retry({ remDr$findElement("id", "excludeRows")$clickElement() })
+        # read ABSOLUTE numbers shown in the first column of selected rows
+        src <- remDr$getPageSource()[[1]]
+        doc <- xml2::read_html(src)
+        # td or th as first child
+        num_txt <- rvest::html_text(rvest::html_nodes(doc, css = "#frame tbody tr.selected > *:first-child"))
+        nums <- suppressWarnings(as.integer(gsub("[^0-9-]", "", num_txt)))
+        nums <- nums[!is.na(nums)]
+        if (length(nums)) excluded_abs <<- c(excluded_abs, nums)
         
-        # wait until selection cleared
+        retry({ remDr$findElement("id", "excludeRows")$clickElement() })
         for (t in 1:40) {
-          sel_n <- remDr$executeScript(
-            "return document.querySelectorAll('#frame tbody tr.selected').length;", list())[[1]]
-          if (isTRUE(sel_n == 0)) break
+          if (length(remDr$findElements("css selector", "#frame tbody tr.selected")) == 0) break
           Sys.sleep(0.1)
         }
       }
       
-      # current page
       click_rows_and_remove()
       
-      # go to chosen pages
       for (i in to_click) {
         retry({
           remDr$findElements(
@@ -239,7 +258,6 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
             ".dataTables_paginate a.paginate_button:not(.previous):not(.next):not(.current)"
           )[[i]]$clickElement()
         })
-        # wait for redraw then act
         for (t in 1:40) {
           if (length(remDr$findElements("css selector", cells_css)) > 0) break
           Sys.sleep(0.1)
@@ -248,8 +266,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       }
       
       ColClicks <<- ColClicks + 1
-      Output[[2]] <<- c(Output[[2]], "Selected Rows")
+      if (length(excluded_abs)) Output[[4]] <<- c(Output[[4]], excluded_abs, NA)  # one NA separator per call
     }
+    
+    
     
   
     
@@ -268,6 +288,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       
       ColClicks <<- ColClicks + 1
       Output[[2]] <<- c(Output[[2]], "Restored Rows")
+      Sys.sleep(2)
     }
     
     
