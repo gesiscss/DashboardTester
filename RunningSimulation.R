@@ -9,7 +9,7 @@ gc()
 #setwd("SOURCE FILE DIRECTORY")
 
 # number of users to simulate (simulating 1 user takes several minutes)
-simulate_n_users = 1
+simulate_n_users = 10
 
 # loading necessary packages (install first if not available)
 require(WhatsR)
@@ -21,7 +21,7 @@ require(rvest)
 ##### setting simulation parameters (passed to SimulateChatDashboardParticipant())
 
 # set the url where your ChatDashboard instance is running (including the forwarding parameter)
-url_set = "https://shiny.molekulare-psychologie.de/jkohne/ChatDashboardShowcase/?id="
+url_set = "http://127.0.0.1:8000/?id="
 
 # set the id that the simulated participant should use to log in to the ChatDashboard
 id_set = "SimulatedParticipant"
@@ -30,10 +30,10 @@ id_set = "SimulatedParticipant"
 pw_set = "password"
 
 # set the web driver used by R Selenium to simulate the participant
-browser_set = "chrome"
+browser_set = "firefox"
 
 # set the chromeversion used to simulate the participant, passed to chreomver paramter in RSelenium::rsDriver()
-version_set = "112.0.5615.49"
+version_set = "latest"
 
 # set thew port used to simulate the participant, must be valid and available
 port_set = 4567L
@@ -72,11 +72,10 @@ for (i in 1:simulate_n_users) {
                                                               browser = browser_set,
                                                               version = version_set,
                                                               port = port_set,
-                                                              filePath = filePath_set,
-                                                              )
+                                                              filePath = filePath_set)
   
   # print info
-  print(paste0("finsihed simulating user ",i))
+  print(paste0("finished simulating user ",i))
   
 }
 

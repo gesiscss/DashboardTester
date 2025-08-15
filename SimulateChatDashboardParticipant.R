@@ -3,12 +3,19 @@
 # Tutorial for using RSelenium:
 # https://www.youtube.com/watch?v=WRjKyCZsbE4
 
+# when running the function outside of a scriopt, you need to load the following packages:
+# library(RSelenium)
+# library(rvest)
+# library(xml2)
+# library(magrittr)
+
+
 SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # url of the ChatDashboard instance you want to test,
                                              # e.g. https://l.linklyhq.com/l/1kUiI/?id=
                                              id = "SimulatedParticipant", # Name for the simulated participant, will be appended to the /?id= part of the url and used as a username
                                              pw = "password", # Password for accessing the ChatDashboard instance
-                                             browser = "chrome", # web driver for simulating participants
-                                             version = "112.0.5615.49", # version of web driver to use, needs to match a browser version currently installed on your system
+                                             browser = "firefox", # web driver for simulating participants
+                                             version = "latest", # version of web driver to use, needs to match a browser version currently installed on your system
                                              port = 4567L, # port to use for RSelenium session
                                              filePath = "PATH-TO-YOUR-TEST-FILES" # path to folder containing the files a simulated participant should upload. Can be generated
                                              # using the create_chatlog() function in the WhatsR package.
@@ -20,6 +27,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ### listing test files and selecting one file at random
     Testfiles <- list.files(filePath)[which(sapply(strsplit(list.files(filePath),".",fixed = TRUE),`[[`,2) == "txt")]
     filePath <- paste0(filePath,"/",sample(Testfiles,1))
+    filePath <- normalizePath(filePath, winslash = "/", mustWork = TRUE)
     
     # Initializing output list (settings and simulated participant behavior)
     Output <- list(Setup = c(url,id,pw,browser, version, port, filePath,time_start = Sys.time(),time_finish = NA),
@@ -29,65 +37,88 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
                    ServersideMessages = NA)
     
     
-    #### Setting up web driver ####
+    #### Setting up web driver quietly ####
+    
+    # quiet helper (one-liner)
+    quiet <- function(x) suppressWarnings(suppressMessages(x))
     
     # creating driver object
-    rs_driver_object <- rsDriver(browser = browser,
-                                 chromever = version,
-                                 verbose = F,
-                                 port = port)
+    rs_driver_object <- quiet(rsDriver(browser = browser,
+                                 geckover = version,
+                                 verbose = FALSE,
+                                 check = FALSE,
+                                 port = port,
+                                 phantomver = NULL))
     
     # creating client from driver object
     remDr <- rs_driver_object$client
+    
+    # Define retry function to deal with stale elements
+    retry <- function(expr, tries = 5, pause = 0.3) {
+      for (i in seq_len(tries)) {
+        ok <- try(force(expr), silent = TRUE)
+        if (!inherits(ok, "try-error")) return(invisible(TRUE))
+        Sys.sleep(pause)
+      }
+      stop("retry failed")
+    }
+    
+    # waiting function
+    wait_for <- function(using, value, timeout = 20) {
+      t0 <- Sys.time()
+      repeat {
+        if (length(remDr$findElements(using, value))) return(invisible(TRUE))
+        if (as.numeric(difftime(Sys.time(), t0, units = "secs")) > timeout) stop("timeout: ", value)
+        Sys.sleep(0.25)
+      }
+    }
     
     
     #### Simulate Participant Behavior ####
     
     # navigating to website
-    Sys.sleep(3)
-    url <- paste0(url,id)
-    remDr$navigate(url)
+    remDr$navigate(paste0(url, id))
+    wait_for("id", "auth-user_id")
+    remDr$findElement("id", "auth-user_id")$sendKeysToElement(list(id))
+    remDr$findElement("id", "auth-user_pwd")$sendKeysToElement(list(pw))
+    retry({ remDr$findElement("id", "auth-go_auth")$clickElement() })
     Sys.sleep(3)
     
-    # entering username
-    login <- remDr$findElement(using = "xpath",value = '//*[@id="auth-user_id"]')
-    login$click()
-    login$sendKeysToElement(list(id))
-    
-    # entering password 
-    pwd <- remDr$findElement(using = "xpath",value = '//*[@id="auth-user_pwd"]')
-    pwd$click()
-    pwd$sendKeysToElement(list(pw))
+    # clicking intro check button
+    wait_for("id", "IntroCheck")
+    retry({ remDr$findElement("id", "IntroCheck")$clickElement() })
+    Sys.sleep(3)
     
     # moving mouse around and clicking
     remDr$mouseMoveToLocation(100, 50)
     remDr$click(buttonId = 1)
-    
-    # clicking login button
-    Sys.sleep(3)
-    remDr$findElement(using = "xpath", '//*[@id="auth-go_auth"]')$clickElement()
-    Output[[2]] <- "Log in complete"
-    
-    # moving mouse around and clicking
-    remDr$mouseMoveToLocation(100, 50)
-    remDr$click(buttonId = 1)
-    
-    ### clicking intro check button
-    Sys.sleep(3)
-    remDr$findElement(using = "xpath", '//*[@id="IntroCheck"]')$clickElement()
-    Output[[2]] <- c(Output[[2]],"Intro confirmed")
     
     # sending file path to upload button
+    wait_for("id", "file")
+    retry({ remDr$findElement("id", "file")$sendKeysToElement(list(filePath)) })
     Sys.sleep(3)
-    remDr$findElement("id", 'file')$sendKeysToElement(list(filePath))
-    Output[[2]] <- c(Output[[2]],"File uploaded")
     
     # click processing button
-    Sys.sleep(30)
-    remDr$findElement(using = "xpath", '//*[@id="submit"]')$clickElement()
+    retry({ remDr$findElement("id", "submit")$clickElement() })
     Output[[2]] <- c(Output[[2]],"File processing button clicked")
-    Sys.sleep(60)
+    Sys.sleep(10)
     
+    # Select random chat donor
+    Sys.sleep(3)
+    retry({ remDr$findElement("id", "person_select-selectized")$clickElement() })
+    retry({
+      opts <- remDr$findElements("css selector", ".selectize-dropdown-content .option[data-selectable]")
+      opts[[ sample.int(length(opts), 1) ]]$clickElement()
+    })
+    Output[[2]] <- c(Output[[2]], "Random person selected from dropdown")
+    Sys.sleep(3)
+    
+    #click "continue" button
+    Sys.sleep(3)
+    retry({ remDr$findElement("id", "person_submit")$clickElement() })
+    wait_for("id", "donation")
+    Sys.sleep(3)
+
     # Creating ColClicks object
     ColClicks <- 0
     
@@ -95,137 +126,148 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     
     Column_select <- function(){
       
-      # click dropdown menu
-      remDr$findElement(using = "css selector", ".btn.dropdown-toggle.btn-default")$clickElement()
+      # open dropdown
+      retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
       
-      # defining Xpaths for column selector elements
-      ColSelectorVec <- NULL
-      Sys.sleep(3)
-      for (i in 0:15) {ColSelectorVec[i] <- paste0('//*[@id="bs-select-3-',i,'"]/span[2]')}
+      # get current menu id (e.g., bs-select-3, but dynamic)
+      menu   <- remDr$findElement("css selector", "div[id^='bs-select-'][role='listbox']")
+      menu_id <- menu$getElementAttribute("id")[[1]]
       
-      # random selection of xpaths
-      RandCols <- NULL
-      RandCols <- sample(ColSelectorVec,size = sample(1:50,1),replace = TRUE)
+      # options under this menu: second span holds the label
+      opt_xpath <- sprintf('//*[@id="%s"]//li/a/span[2]', menu_id)
       
-      # clicking on random selection of columns
-      Sys.sleep(1)
-      sapply(RandCols,function(x){remDr$findElement(using = "xpath", x)$clickElement();Sys.sleep(1)})
+      # choose random options
+      opts <- remDr$findElements("xpath", opt_xpath)
+      n <- length(opts); if (n == 0L) return(invisible(NULL))
+      picks <- sample.int(n, size = min(n, sample(1:50, 1)), replace = TRUE)
       
-      # updating colClicks object
-      ColClicks <<- ColClicks + length(RandCols)
+      # click each, re-finding before every click to avoid stale refs
+      for (j in picks) {
+        retry({ remDr$findElements("xpath", opt_xpath)[[j]]$clickElement() })
+        Sys.sleep(0.2)
+      }
       
-      # unclicking dropdown menu
-      Sys.sleep(3)
-      remDr$findElement(using = "css selector", ".btn.dropdown-toggle.btn-default")$clickElement()
+      ColClicks <<- ColClicks + length(picks)
       
-      #### Saving Data Selection in Variables ####
+      # close dropdown
+      retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
       
-      # User decision
-      Output[[2]] <<- c(Output[[2]],"Selected Columns")
-      
-      # selected columns
-      page_colsel_xpath <- '//*[@id="bs-select-3"]/ul'
-      doc_pages_colsel <- read_html(remDr$getPageSource()[[1]]) # we already scraped this
-      children_colsel_pages <- doc_pages_colsel %>% html_node(xpath = page_colsel_xpath) %>% html_children()
+      # log selection using the same dynamic id
+      Output[[2]] <- c(Output[[2]], "Selected Columns")
+      page_colsel_xpath <- sprintf('//*[@id="%s"]/ul', menu_id)
+      doc_pages_colsel  <- read_html(remDr$getPageSource()[[1]])
+      children_colsel_pages <- doc_pages_colsel %>%
+        html_node(xpath = page_colsel_xpath) %>%
+        html_children()
       Selected_columns <- html_text(children_colsel_pages)[as.character(html_attrs(children_colsel_pages)) == "selected"]
-      
-      # saving to output
-      Output[[3]] <<- c(Output[[3]],Selected_columns,NA)
-      
+      Output[[3]] <- c(Output[[3]], Selected_columns, NA)
     }
     
     
     ##### SELECTING ROWS FUNCTION ####
     
+    # Function for selecting rows and excluding them
     Row_select <- function(){
+      # paginator buttons except prev/next/current
+      pags <- remDr$findElements(
+        "css selector",
+        ".dataTables_paginate a.paginate_button:not(.previous):not(.next):not(.current)"
+      )
+      if (length(pags) == 0L) return(invisible(NULL))
+      to_click <- sample(seq_along(pags), size = min(3, length(pags)))
       
-      # creating empty vector/emptying it
-      RowSelectorVec <- NULL
+      cells_css <- "#frame tbody tr:not(.dataTables_empty) td:first-child"
+      rows_css  <- "#frame tbody tr:not(.dataTables_empty)"
       
-      # getting number of existing table pages
-      Sys.sleep(3)
-      pages_xpath <- paste0('//*[@id="DataTables_Table_',ColClicks,'_paginate"]/span')
-      doc_pages <- read_html(remDr$getPageSource()[[1]])
-      children_pages <- doc_pages %>% html_node(xpath = pages_xpath) %>% html_children()
-      
-      # removing ellipsis if present
-      if (html_text(children_pages[c(6)][[1]]) == "…") { children_pages <- children_pages[-c(6)]}
-      if (html_text(children_pages[c(2)][[1]]) == "…") { children_pages <- children_pages[-c(2)]}
-      
-      # removing current table sheet to reduce the number of possible selections to 5
-      children_pages <- children_pages[-c(1)]
-      
-      # chose random pages to click on
-      page_nums <- sample(1:length(children_pages),sample(1:length(children_pages),1), replace = TRUE)
-      
-      # remove zeros from page_nums
-      page_nums <- page_nums[page_nums != 0]
-      
-      # creating Xpaths of table pages to click on
-      pages_xpaths <- sapply(page_nums, function(x){paste0(pages_xpath,'/a[',x,']')})
-      
-      # for each selected table page, we select rows to exclude at random
-      for (i in pages_xpaths) {
-        
-        # going to table page
-        Sys.sleep(3)
-        remDr$findElement(using = "xpath", i)$clickElement()
-        Sys.sleep(3)
-        
-        # counting number of rows and creating rows_Xpaths accordingly
-        rows_xpaths <- paste0('//*[@id="DataTables_Table_',ColClicks,'"]/tbody')
-        doc_rows <- read_html(remDr$getPageSource()[[1]])
-        children_rows <- doc_rows %>% html_node(xpath = rows_xpaths) %>% html_children()
-        length(children_rows)
-        
-        # creating empty vector/emptying it
-        RowSelectorVec <- NULL
-        j <- NULL
-        
-        # creating vector of xpaths for rows to be clicked on
-        for (j in seq_along(children_rows)) {
-          
-          RowSelectorVec[j] <- paste0('//*[@id="DataTables_Table_',ColClicks,'"]/tbody/tr[',j,']')
-          
+      click_rows_and_remove <- function(){
+        # wait until cells exist
+        for (t in 1:40) {
+          if (length(remDr$findElements("css selector", cells_css)) > 0) break
+          Sys.sleep(0.1)
         }
         
-        # random selection of Xpaths for rows to click on
-        RandRows <- sample(RowSelectorVec,size = sample(1:50,1),replace = TRUE)
+        # pick k targets
+        cells <- remDr$findElements("css selector", cells_css)
+        n <- length(cells); if (n == 0L) return(invisible(NULL))
+        k <- max(1, min(n, floor(n/3)))
+        idx <- sample.int(n, k)
         
-        # clicking on random selection of rows
-        sapply(RandRows,function(x){remDr$findElement(using = "xpath", x)$clickElement()})
+        # click chosen cells; re-find each time
+        for (j in idx) {
+          retry({
+            el <- remDr$findElements("css selector", cells_css)[[j]]
+            remDr$executeScript("arguments[0].scrollIntoView({block:'center'});", list(el))
+            el$clickElement()
+          })
+          Sys.sleep(0.1)
+        }
         
-        # Saving excluded rows
-        Output[[4]] <<- c(Output[[4]],i,RandRows,NA)
+        # ensure selection occurred; fallback to clicking rows if needed
+        sel_n <- remDr$executeScript(
+          "return document.querySelectorAll('#frame tbody tr.selected').length;", list())[[1]]
+        if (is.null(sel_n) || sel_n == 0) {
+          for (j in idx) {
+            retry({
+              el <- remDr$findElements("css selector", rows_css)[[j]]
+              remDr$executeScript("arguments[0].scrollIntoView({block:'center'});", list(el))
+              el$clickElement()
+            })
+            Sys.sleep(0.1)
+          }
+        }
         
+        # exclude
+        retry({ remDr$findElement("id", "excludeRows")$clickElement() })
+        
+        # wait until selection cleared
+        for (t in 1:40) {
+          sel_n <- remDr$executeScript(
+            "return document.querySelectorAll('#frame tbody tr.selected').length;", list())[[1]]
+          if (isTRUE(sel_n == 0)) break
+          Sys.sleep(0.1)
+        }
       }
       
-      # clicking on exclude rows for all selected rows
-      remDr$findElement(using = "xpath", '//*[@id="excludeRows"]')$clickElement()
+      # current page
+      click_rows_and_remove()
       
-      # updating Colclicks to get correct DataTables_Table_XX number
+      # go to chosen pages
+      for (i in to_click) {
+        retry({
+          remDr$findElements(
+            "css selector",
+            ".dataTables_paginate a.paginate_button:not(.previous):not(.next):not(.current)"
+          )[[i]]$clickElement()
+        })
+        # wait for redraw then act
+        for (t in 1:40) {
+          if (length(remDr$findElements("css selector", cells_css)) > 0) break
+          Sys.sleep(0.1)
+        }
+        click_rows_and_remove()
+      }
+      
       ColClicks <<- ColClicks + 1
-      
-      # saving to output
-      Output[[2]] <<- c(Output[[2]],"Selected Rows")
-      
+      Output[[2]] <<- c(Output[[2]], "Selected Rows")
     }
     
+  
     
     ##### RESTORING ROWS FUNCTION ####
     
     # function for restoring rows and updating ColClicks
     Row_restore <- function(){
+      retry({ remDr$findElement("id", "RestoreRows")$clickElement() })
       
-      # clicking on restore_rows button
-      remDr$findElement(using = "xpath", '//*[@id="RestoreRows"]')$clickElement()
+      # wait for table to repopulate after restore
+      cells_css <- 'table.dataTable tbody tr:not(.dataTables_empty) td:nth-child(1)'
+      for (t in 1:40) {
+        if (length(remDr$findElements("css selector", cells_css)) > 0) break
+        Sys.sleep(0.1)
+      }
       
-      # updating ColClicks to get correct DataTables_Table_XX number
       ColClicks <<- ColClicks + 1
-      
-      # saving to output
-      Output[[2]] <<- c(Output[[2]],"Restored Rows")
-      
+      Output[[2]] <<- c(Output[[2]], "Restored Rows")
     }
     
     
@@ -268,14 +310,18 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     Sys.sleep(3)
     DataSelection()
     
-    
     ##### DATA DONATION #####
     
     ### clicking on data donation button
-    Sys.sleep(3)
-    remDr$findElement(using = "xpath", '//*[@id="donation"]')$clickElement()
-    Output[[2]] <- c(Output[[2]],"Data Donation button clicked")
-    Sys.sleep(3)
+    # clicking on data donation button
+    retry({ remDr$findElement("id", "donation")$clickElement() })
+    Output[[2]] <- c(Output[[2]], "Data Donation button clicked")
+    
+    # wait for shinyalert modal to appear
+    for (i in 1:80) {
+      if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
+      Sys.sleep(0.25)
+    }
     
     ## initial value for random choice for data donation
     Value_randStart = sample(1:200,1)
@@ -283,34 +329,43 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     # function for random behavior of clicking on donation button and either accepting or going back and restart data selection
     DataDonation <- function(Value_rand = Value_randStart) {
       
+      # assume donation modal is already open
       while (Value_rand <= 100) {
         
-        ### going back to regular page
-        Sys.sleep(3)
-        remDr$findElement(using = "xpath", '/html/body/div[9]/div[7]/button[1]')$clickElement()
-        Output[[2]] <<- c(Output[[2]],"Clicking no on data donation popup")
+        # click "Zurück zur Datenauswahl"
+        retry({ remDr$findElement("css selector", "button.cancel")$clickElement() })
+        # wait modal closed
+        for (i in 1:20) {
+          if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
+          Sys.sleep(0.25)
+        }
         
-        # UserDecision
-        Output[[2]] <<- c(Output[[2]],"Went back from donation consent")
-        
-        ### Call Data Selection again
+        # redo data selection
         DataSelection()
         
-        ### clicking on data donation button
-        remDr$findElement(using = "xpath", '//*[@id="donation"]')$clickElement()
-        Output[[2]] <<- c(Output[[2]],"Data Donation button clicked")
+        # open donation modal again
+        Sys.sleep(3)
+        retry({ remDr$findElement("id", "donation")$clickElement() })
+        # wait modal open
+        #for (i in 1:20) {
+        #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
+        #  Sys.sleep(0.25)
+        #}
         
-        # renewing random variable
-        Value_rand = sample(1:200,1)
-        
+        Value_rand <- sample(1:200, 1)
       }
       
-      # clicking on okay button for data donation
+      # confirm donation
       Sys.sleep(3)
-      remDr$findElement(using = "xpath", '/html/body/div[9]/div[7]/button[2]')$clickElement()
-      Output[[2]] <<- c(Output[[2]],"Gave Donation consent")
-      
+      retry({ remDr$findElement("css selector", "button.confirm")$clickElement() })
+      # wait modal closed
+      #for (i in 1:20) {
+      #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
+      #  Sys.sleep(0.25)
+      #}
+      Output[[2]] <<- c(Output[[2]], "Gave Donation consent")
     }
+    
     
     #### Running Data Donation function ####
     DataDonation()
@@ -318,14 +373,16 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     
     ### clicking "ok" on auto-removal message
     Sys.sleep(5)
-    remDr$findElement(using = "xpath", '/html/body/div[9]/div[7]/button[2]')$clickElement()
+    remDr$findElement("css selector", "button.confirm")$clickElement()
     Sys.sleep(3)
-    
     
     #### CLOSING PROCESS #####
     
     #### Logging every server-side message
-    Output[[5]] <- remDr$log("browser")
+    #Output[[5]] <- tryCatch(
+    #  remDr$log("browser"),
+    #  error = function(e) list(message = paste("Browser logs not available:", e$message))
+    #)
     names(Output) <- c("Setup","UserActions","SelectedColumns","ExcludedRows","ServersideMessages")
     
     ### closing web driver after finishing
@@ -339,16 +396,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
   },
   
   error = function(cond) {
-    
-    # closing driver
-    print("ERROR")
-    Sys.sleep(5)
-    remDr$close()
-    rs_driver_object$server$stop()
-    
-    ### returning log
+    # message("ERROR")  # or remove entirely if you want no output
+    try(remDr$close(), silent = TRUE)
+    try(rs_driver_object$server$stop(), silent = TRUE)
     return(Output)
-    
   }
   
   # end of tryCatch
