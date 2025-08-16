@@ -1,4 +1,4 @@
-#### Script for running a simulation of participants on a ChatDashboard instance 
+#### Script for running a simulation of participants on a ChatDashboard instance
 
 ##### setup
 
@@ -39,7 +39,7 @@ version_set = "latest"
 port_set = 4567L
 
 # set the file path for the chat logs to be uploaded by simulated participants
-filePath_set = "./UploadData"
+filePath_set = "UploadData"
 
 
 
@@ -64,7 +64,7 @@ SimulationResults <- list()
 # looping through all participants to be simulated and storing results
 # TODO: adapt parameters for SimulateChatDashboardParticipant() function before running the loop
 for (i in 1:simulate_n_users) {
-  
+
   # simulation loop
   SimulationResults[[i]]  <- SimulateChatDashboardParticipant(url = url_set,
                                                               id = id_set,
@@ -73,13 +73,13 @@ for (i in 1:simulate_n_users) {
                                                               version = version_set,
                                                               port = port_set,
                                                               filePath = filePath_set)
-  
+
   # print info
   print(paste0("finished simulating user ",i))
-  
+
 }
 
-# save simulation results as data frame in folder for further analysis. 
+# save simulation results as data frame in folder for further analysis.
 # WARNING: This will overwrite existing files with the same name!
 saveRDS(SimulationResults,paste("./AnalyzingSimulation/SimulationLogs/","SimulationLog_",gsub(" ","_",Sys.time()),".rds",sep = ""))
 

@@ -339,6 +339,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     Output[[2]] <- c(Output[[2]], "Data Donation button clicked")
     
     # wait for shinyalert modal to appear
+    Sys.sleep(3)
     for (i in 1:80) {
       if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
       Sys.sleep(0.25)
