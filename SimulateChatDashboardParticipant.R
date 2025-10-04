@@ -9,6 +9,17 @@
 # library(xml2)
 # library(magrittr)
 
+# url = "https://chat-dashboard-stage.e-c-crew.dev/?id="
+# id = "SimulatedParticipant"
+# pw = "password"
+# browser = "firefox"
+# version = "latest"
+# port = 4567L
+# filePath = "UploadData"
+
+# lsof -i :4567
+# kill <PID>
+
 
 SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # url of the ChatDashboard instance you want to test,
                                              # e.g. https://l.linklyhq.com/l/1kUiI/?id=
@@ -56,7 +67,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     remDr <- rs_driver_object$client
     
     # Define retry function to deal with stale elements
-    retry <- function(expr, tries = 5, pause = 0.3) {
+    retry <- function(expr, tries = 5, pause = 1) {
       for (i in seq_len(tries)) {
         ok <- try(force(expr), silent = TRUE)
         if (!inherits(ok, "try-error")) return(invisible(TRUE))
@@ -66,7 +77,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     }
     
     # waiting function
-    wait_for <- function(using, value, timeout = 20) {
+    wait_for <- function(using, value, timeout = 30) {
       t0 <- Sys.time()
       repeat {
         if (length(remDr$findElements(using, value))) return(invisible(TRUE))
@@ -86,13 +97,19 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     retry({ remDr$findElement("id", "auth-go_auth")$clickElement() })
     Sys.sleep(3)
     
+    # moving mouse around and clicking
+    remDr$mouseMoveToLocation(100, 100)
+    remDr$click(buttonId = 1)
+    
     # clicking intro check button
     wait_for("id", "IntroCheck")
+    remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+    Sys.sleep(1)
     retry({ remDr$findElement("id", "IntroCheck")$clickElement() })
     Sys.sleep(3)
     
     # moving mouse around and clicking
-    remDr$mouseMoveToLocation(100, 50)
+    remDr$mouseMoveToLocation(100, 100)
     remDr$click(buttonId = 1)
     
     # sending file path to upload button
@@ -127,7 +144,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ##### SELECTING COLUMNS FUNCTION ####
     
     Column_select <- function(){
+      
       # open dropdown
+      remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+      Sys.sleep(1)
       retry({ remDr$findElement("css selector", ".btn.dropdown-toggle.btn-default")$clickElement() })
       
       # dynamic menu id
@@ -192,6 +212,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ##### SELECTING ROWS FUNCTION ####
     
     # Function for selecting rows and excluding them
+    # TODO: The click in remove rows doesn't work
     Row_select <- function(){
       pags <- remDr$findElements(
         "css selector",
@@ -222,6 +243,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
           })
           Sys.sleep(0.1)
         }
+        
         if (length(remDr$findElements("css selector", "#frame tbody tr.selected")) == 0) {
           for (j in idx) {
             retry({
@@ -242,7 +264,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
         nums <- nums[!is.na(nums)]
         if (length(nums)) excluded_abs <<- c(excluded_abs, nums)
         
+        remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+        Sys.sleep(1)
         retry({ remDr$findElement("id", "excludeRows")$clickElement() })
+        
         for (t in 1:40) {
           if (length(remDr$findElements("css selector", "#frame tbody tr.selected")) == 0) break
           Sys.sleep(0.1)
@@ -277,6 +302,9 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     
     # function for restoring rows and updating ColClicks
     Row_restore <- function(){
+      
+      remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+      Sys.sleep(1)
       retry({ remDr$findElement("id", "RestoreRows")$clickElement() })
       
       # wait for table to repopulate after restore
@@ -335,6 +363,8 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     
     ### clicking on data donation button
     # clicking on data donation button
+    remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+    Sys.sleep(1)
     retry({ remDr$findElement("id", "donation")$clickElement() })
     Output[[2]] <- c(Output[[2]], "Data Donation button clicked")
     
@@ -378,7 +408,10 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       }
       
       # confirm donation
-      Sys.sleep(3)
+      # TODO: This doesnt't work somehow?
+      Sys.sleep(1)
+      remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+      Sys.sleep(1)
       retry({ remDr$findElement("css selector", "button.confirm")$clickElement() })
       # wait modal closed
       #for (i in 1:20) {

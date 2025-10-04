@@ -21,7 +21,7 @@ require(rvest)
 ##### setting simulation parameters (passed to SimulateChatDashboardParticipant())
 
 # set the url where your ChatDashboard instance is running (including the forwarding parameter)
-url_set = "http://127.0.0.1:8000/?id="
+url_set = "https://chat-dashboard-stage.e-c-crew.dev/?id="
 
 # set the id that the simulated participant should use to log in to the ChatDashboard
 id_set = "SimulatedParticipant"
