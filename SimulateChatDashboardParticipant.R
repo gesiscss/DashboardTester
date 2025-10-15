@@ -4,18 +4,18 @@
 # https://www.youtube.com/watch?v=WRjKyCZsbE4
 
 # when running the function outside of a scriopt, you need to load the following packages:
-# library(RSelenium)
-# library(rvest)
-# library(xml2)
-# library(magrittr)
+#library(RSelenium)
+#library(rvest)
+#library(xml2)
+#library(magrittr)
 
-# url = "https://chat-dashboard-stage.e-c-crew.dev/?id="
-# id = "SimulatedParticipant"
-# pw = "password"
-# browser = "firefox"
-# version = "latest"
-# port = 4567L
-# filePath = "UploadData"
+#url = "https://chat-dashboard-stage.e-c-crew.dev/?id="
+#id = "SimulatedParticipant"
+#pw = "password"
+#browser = "firefox"
+#version = "latest"
+#port = 4567L
+#filePath = "UploadData"
 
 # lsof -i :4567
 # kill <PID>
@@ -94,7 +94,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     wait_for("id", "auth-user_id")
     remDr$findElement("id", "auth-user_id")$sendKeysToElement(list(id))
     remDr$findElement("id", "auth-user_pwd")$sendKeysToElement(list(pw))
-    retry({ remDr$findElement("id", "auth-go_auth")$clickElement() })
+    retry({ remDr$findElement("id", "auth-go_auth")$clickElement()})
     Sys.sleep(3)
     
     # moving mouse around and clicking
@@ -212,7 +212,6 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ##### SELECTING ROWS FUNCTION ####
     
     # Function for selecting rows and excluding them
-    # TODO: The click in remove rows doesn't work
     Row_select <- function(){
       pags <- remDr$findElements(
         "css selector",
@@ -361,7 +360,6 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     
     ##### DATA DONATION #####
     
-    ### clicking on data donation button
     # clicking on data donation button
     remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
     Sys.sleep(1)
@@ -386,6 +384,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
         
         # click "Zurück zur Datenauswahl"
         retry({ remDr$findElement("css selector", "button.cancel")$clickElement() })
+        
         # wait modal closed
         for (i in 1:20) {
           if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
@@ -398,6 +397,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
         # open donation modal again
         Sys.sleep(3)
         retry({ remDr$findElement("id", "donation")$clickElement() })
+        
         # wait modal open
         #for (i in 1:20) {
         #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
@@ -408,16 +408,18 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
       }
       
       # confirm donation
-      # TODO: This doesnt't work somehow?
       Sys.sleep(1)
       remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+      
       Sys.sleep(1)
       retry({ remDr$findElement("css selector", "button.confirm")$clickElement() })
+      
       # wait modal closed
       #for (i in 1:20) {
       #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
       #  Sys.sleep(0.25)
       #}
+      
       Output[[2]] <<- c(Output[[2]], "Gave Donation consent")
     }
     
@@ -438,6 +440,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     #  remDr$log("browser"),
     #  error = function(e) list(message = paste("Browser logs not available:", e$message))
     #)
+    
     names(Output) <- c("Setup","UserActions","SelectedColumns","ExcludedRows","ServersideMessages")
     
     ### closing web driver after finishing
