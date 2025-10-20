@@ -9,7 +9,7 @@ gc()
 #setwd("SOURCE FILE DIRECTORY")
 
 # number of users to simulate (simulating 1 user takes several minutes)
-simulate_n_users = 10
+simulate_n_users = 50
 
 # loading necessary packages (install first if not available)
 require(WhatsR)
@@ -21,18 +21,18 @@ require(rvest)
 ##### setting simulation parameters (passed to SimulateChatDashboardParticipant())
 
 # set the url where your ChatDashboard instance is running (including the forwarding parameter)
-url_set = "https://chat-dashboard-stage.e-c-crew.dev/?id="
+url_set = "http://127.0.0.1:3739/?id=" #"https://shiny.gesis.org/chat-dashboard/?id="
 
 # set the id that the simulated participant should use to log in to the ChatDashboard
-id_set = "SimulatedParticipant"
+id_set = "AutoTest"
 
 # set the password the simulated participant should use to log in to the ChatDashboard
-pw_set = "password"
+pw_set = "7z9c72ud"
 
 # set the web driver used by R Selenium to simulate the participant
 browser_set = "firefox"
 
-# set the chromeversion used to simulate the participant, passed to chreomver paramter in RSelenium::rsDriver()
+# set the chromeversion used to simulate the participant, passed to chromever paramter in RSelenium::rsDriver()
 version_set = "latest"
 
 # set thew port used to simulate the participant, must be valid and available

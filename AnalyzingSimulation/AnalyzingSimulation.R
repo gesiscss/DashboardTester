@@ -54,7 +54,7 @@ DecryptedList <- lapply(EncryptedList, decrypt_object, researcher_key_pair)
 
 # this is automatically taking the first listed file, we recommend only keeping
 # one file in this folder at a time
-SimulationLog <- readRDS(list.files(path="./SimulationLogs",pattern = "rds",full.names=TRUE)[1])
+SimulationLog <- readRDS(list.files(path = "./SimulationLogs",pattern = "rds",full.names = TRUE)[1])
 
 
 
@@ -117,62 +117,62 @@ ColSummary <- function(SimulationLog,donation) {
   
                 # Listing all potentially existing columns names
                 # Must be the same names as in DF saved by ChatDashboard instance on the server
-                ExistingColumns <- c("Timestamp",
-                                     "Sender",
-                                     "Sender_anonymized",
-                                     "Message",
-                                     "Message_simplified",
-                                     "Message_words",
+                ExistingColumns <- c("Zeit",
+                                     "Absender",
+                                     "Absender_anonym",
+                                     "Nachricht",
+                                     "Nachricht_vereinfacht",
+                                     "Worte",
                                      "Links",
-                                     "Links_anonymized",
-                                     "Media",
-                                     "Media_anonymized",
-                                     "Locations",
-                                     "Locations_anonymized",
+                                     "Links_anonym",
+                                     "Medien",
+                                     "Medien_anonym",
+                                     "Standorte",
+                                     "Standorte_anonym",
                                      "Emoji",
-                                     "Emoji_description",
+                                     "Emoji_beschreibung",
                                      "Smilies",
-                                     "System_messages",
-                                     "Word_count",
-                                     "Time_order",
-                                     "Display_order")
+                                     "System_info",
+                                     "Wortanzahl",
+                                     "Nummerierung_zeit",
+                                     "Nummerierung_anzeige")
                 
                 # defining preselected columns. These are the columns that are displayed to
                 # (simulated) ChatDashboard participants by default
-                PreselectedColumns <- c("Timestamp",
-                                        "Sender_anonymized",
-                                        "Links_anonymized",
-                                        "Media_anonymized",
-                                        "Locations_anonymized",
+                PreselectedColumns <- c("Zeit",
+                                        "Absender_anonym",
+                                        "Links_anonym",
+                                        "Medien_anonym",
+                                        "Standorte_anonym",
                                         "Emoji",
-                                        "Emoji_description",
+                                        "Emoji_beschreibung",
                                         "Smilies",
-                                        "Word_count",
-                                        "Time_order",
-                                        "Display_order")
+                                        "Wortanzahl",
+                                        "Nummerierung_zeit",
+                                        "Nummerierung_anzeige")
                 
                 # non-selected columns These are the columns that are NOT displayed to
                 # (simulated) ChatDashboard participants by default
-                NonselectedColumns <- c("Sender",
-                                        "Message",
-                                        "Message_simplified",
-                                        "Message_words",
+                NonselectedColumns <- c("Absender",
+                                        "Nachricht",
+                                        "Nachricht_vereinfacht",
+                                        "Worte",
                                         "Links",
-                                        "Media",
-                                        "Locations",
-                                        "System_messages")
+                                        "Medien",
+                                        "Standorte",
+                                        "System_info")
                   
                 
                 # Defining PI columns. These are the names of columns that could
                 # potentially contain Personal Identifiable Information (PII)
-                PI_columns <- c("Sender",
-                                "Message",
-                                "Message_simplified",
-                                "Message_words",
+                PI_columns <- c("Absender",
+                                "Nachricht",
+                                "Nachricht_vereinfacht",
+                                "Worte",
                                 "Links",
-                                "Media",
-                                "Locations",
-                                "System_messages")
+                                "Medien",
+                                "Standorte",
+                                "System_info")
                 
                 # Checking if donation object is a valid data.frame
                 # This is important for NAs if the simulation errored out
@@ -334,7 +334,7 @@ for (i in seq_along(SimulationLog)) {
 
 ColType <- rep(NA,length(ColResults))
   
-for (i in seq_along(ColResults)){
+for (i in seq_along(ColResults)) {
   
   if (is.null(names(ColResults[[i]][1]))) {
     
@@ -352,7 +352,7 @@ for (i in seq_along(ColResults)){
 # Checking NotSelectedButIncludedNotPI [THESE SHOULD ALL EMPTY, IF NOT, THEN THERE IS NON-PI INFORMATION INCLUDED THAT WAS NOT SELECTED BY THE SIMULATED PARTICIPANT]
 Bug_NotSelectedButIncludedNotPI <- list()
 
-for (i in seq_along(ColResults)){
+for (i in seq_along(ColResults)) {
   
   if (is.null(names(ColResults[[i]][1]))) {
     
@@ -374,7 +374,7 @@ for (i in seq_along(ColResults)){
 # Checking NotSelectedButIncludedPI [THESE SHOULD BE ALL EMPTY, IF NOT THEN THERE IS PI INFORMATION INCLUDED THAT WAS NOT SELECTED BY THE SIMULATED PARTICIPANT]
 Bug_NotSelectedButIncludedPI <- list()
 
-for (i in seq_along(ColResults)){
+for (i in seq_along(ColResults)) {
   
   if (is.null(names(ColResults[[i]][1]))) {
     
@@ -392,9 +392,9 @@ for (i in seq_along(ColResults)){
 
 
 # Checking SelectedButNotIncludedNotPI [THESE SHOULD BE ALL EMPTY, IF NOT THEN THERE IS NON-PI INFORMATION THAT WAS SELECTED BY THE SIMULATED PARTICIPANT NOT INCLUDED IN THE DATA]
-Bug_SelectedButNotIncludedNotPI<- list()
+Bug_SelectedButNotIncludedNotPI <- list()
 
-for (i in seq_along(ColResults)){
+for (i in seq_along(ColResults)) {
   
   if (is.null(names(ColResults[[i]][1]))) {
     
@@ -412,9 +412,9 @@ for (i in seq_along(ColResults)){
 
 
 # Checking SelectedButNotIncludedNotPI [THESE CAN CONTAIN VALUES, THESE PI COLUMNS WERE SELECTED BY SIMULATED PARTICIPANTS BUT AUTOMATICALLY REMOVED]
-Bug_SelectedButNotIncludedPI<- list()
+Bug_SelectedButNotIncludedPI <- list()
 
-for (i in seq_along(ColResults)){
+for (i in seq_along(ColResults)) {
   
   if (is.null(names(ColResults[[i]][1]))) {
     
@@ -435,7 +435,7 @@ for (i in seq_along(ColResults)){
 ##### CLOSER LOOK AT BAD CASES; IF ANY ARE PRESENT  ####
 
 #Bug_NotSelectedButIncludedNotPI [THESE MUST BE ALL 'FALSE' BEFORE YOU LET REAL PEOPLE ONTO YOUR CHATDASHBOARD INSTANCE]
-problematics1<- lapply(Bug_NotSelectedButIncludedNotPI,function(x){print(if(length(x) == 0){return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated"){return(FALSE)} else {return(TRUE)})})
+problematics1 <- lapply(Bug_NotSelectedButIncludedNotPI,function(x){print(if (length(x) == 0) {return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated") {return(FALSE)} else {return(TRUE)})})
 problematic_indices1 <- which(problematics1 == TRUE)
 
 # checking logs and data [THESE MUST ALL BE EMPTY]
@@ -446,7 +446,7 @@ SimulationLog[problematic_indices1]
 
 
 #Bug_NotSelectedButIncludedPI [THESE MUST BE ALL 'FALSE' BEFORE YOU LET REAL PEOPLE ONTO YOUR CHATDASHBOARD INSTANCE]
-problematics2<- lapply(Bug_NotSelectedButIncludedPI,function(x){print(if(length(x) == 0){return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated"){return(FALSE)} else {return(TRUE)})})
+problematics2 <- lapply(Bug_NotSelectedButIncludedPI,function(x){print(if (length(x) == 0) {return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated") {return(FALSE)} else {return(TRUE)})})
 problematic_indices2 <- which(problematics2 == TRUE)
 
 # checking logs and data [THESE MUST ALL BE EMPTY]
@@ -458,7 +458,7 @@ SimulationLog[problematic_indices2]
 
 
 #Bug_SelectedButNotIncludedNotPI [THESE SHOULD BE ALL 'FALSE', IF THEY ARE NOT, NON-PI DATA THAT WAS SELECTED FOR DONATION IS MISSING IN THE SIMULATED DONATIONS]
-problematics3<- lapply(Bug_SelectedButNotIncludedNotPI,function(x){print(if(length(x) == 0){return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated"){return(FALSE)} else {return(TRUE)})})
+problematics3 <- lapply(Bug_SelectedButNotIncludedNotPI,function(x){print(if (length(x) == 0) {return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated") {return(FALSE)} else {return(TRUE)})})
 problematic_indices3 <- which(problematics3 == TRUE)
 
 # checking logs and data [THESE SHOULD ALL BE EMPTY]
@@ -470,7 +470,7 @@ SimulationLog[problematic_indices3]
 
 
 # Bug_SelectedButNotIncludedPI [THESE ARE ALLOWED TO CONTAIN VALUES, THESE PI COLUMNS WERE SELECTED BY PARTICIPANTS BUT AUTOMATICALLY REMOVED]
-problematics4<- lapply(Bug_SelectedButNotIncludedPI,function(x){print(if(length(x) == 0){return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated"){return(FALSE)} else {return(TRUE)})})
+problematics4 <- lapply(Bug_SelectedButNotIncludedPI,function(x){print(if (length(x) == 0){return(FALSE)} else if (length(x) == 1 & x[1] == "No Data donated") {return(FALSE)} else {return(TRUE)})})
 problematic_indices4 <- which(problematics4 == TRUE)
 
 # checking logs and data [THESE ARE ALLOWED TO CONTAIN VALUES]

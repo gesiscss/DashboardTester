@@ -4,18 +4,18 @@
 # https://www.youtube.com/watch?v=WRjKyCZsbE4
 
 # when running the function outside of a scriopt, you need to load the following packages:
-#library(RSelenium)
-#library(rvest)
-#library(xml2)
-#library(magrittr)
+# library(RSelenium)
+# library(rvest)
+# library(xml2)
+# library(magrittr)
 
-#url = "https://chat-dashboard-stage.e-c-crew.dev/?id="
-#id = "SimulatedParticipant"
-#pw = "password"
-#browser = "firefox"
-#version = "latest"
-#port = 4567L
-#filePath = "UploadData"
+# url = "https://shiny.gesis.org/chat-dashboard/?id=" # "http://127.0.0.1:3739/?id="
+# id = "SimulatedParticipant"
+# pw = "7z9c72ud"
+# browser = "firefox"
+# version = "latest"
+# port = 4567L
+# filePath = "UploadData"
 
 # lsof -i :4567
 # kill <PID>
@@ -66,15 +66,21 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     # creating client from driver object
     remDr <- rs_driver_object$client
     
+    # force size
+    remDr$setWindowSize(width = 1640, height = 1920)
+    
     # Define retry function to deal with stale elements
     retry <- function(expr, tries = 5, pause = 1) {
       for (i in seq_len(tries)) {
         ok <- try(force(expr), silent = TRUE)
-        if (!inherits(ok, "try-error")) return(invisible(TRUE))
+        if (!inherits(ok,"try-error")) return(invisible(TRUE))
+        if (grepl("stale element", as.character(ok), ignore.case = TRUE)) return(invisible(TRUE))
         Sys.sleep(pause)
       }
       stop("retry failed")
     }
+    
+    
     
     # waiting function
     wait_for <- function(using, value, timeout = 30) {
@@ -97,6 +103,11 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     retry({ remDr$findElement("id", "auth-go_auth")$clickElement()})
     Sys.sleep(3)
     
+    # zooming out
+    Sys.sleep(1)
+    remDr$executeScript("document.body.style.zoom='0.7';") 
+    Sys.sleep(1)
+    
     # moving mouse around and clicking
     remDr$mouseMoveToLocation(100, 100)
     remDr$click(buttonId = 1)
@@ -118,6 +129,9 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     Sys.sleep(3)
     
     # click processing button
+    Sys.sleep(3)
+    remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+    remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
     retry({ remDr$findElement("id", "submit")$clickElement() })
     Output[[2]] <- c(Output[[2]],"File processing button clicked")
     Sys.sleep(15)
@@ -132,7 +146,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     Output[[2]] <- c(Output[[2]], "Random person selected from dropdown")
     Sys.sleep(3)
     
-    #click "continue" button
+    # click "continue" button
     Sys.sleep(3)
     retry({ remDr$findElement("id", "person_submit")$clickElement() })
     wait_for("id", "donation")
@@ -361,6 +375,7 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     ##### DATA DONATION #####
     
     # clicking on data donation button
+    Sys.sleep(3)
     remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
     Sys.sleep(1)
     retry({ remDr$findElement("id", "donation")$clickElement() })
@@ -399,26 +414,24 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
         retry({ remDr$findElement("id", "donation")$clickElement() })
         
         # wait modal open
-        #for (i in 1:20) {
-        #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
-        #  Sys.sleep(0.25)
-        #}
+        for (i in 1:20) {
+          if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) > 0) break
+          Sys.sleep(0.25)
+        }
         
         Value_rand <- sample(1:200, 1)
       }
       
       # confirm donation
-      Sys.sleep(1)
-      remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
-      
-      Sys.sleep(1)
-      retry({ remDr$findElement("css selector", "button.confirm")$clickElement() })
+      Sys.sleep(5)
+      #remDr$findElement("css", "body")$sendKeysToElement(list(key = "end"))
+      remDr$findElement("css selector", "button.confirm")$clickElement()
       
       # wait modal closed
-      #for (i in 1:20) {
-      #  if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
-      #  Sys.sleep(0.25)
-      #}
+      for (i in 1:20) {
+        if (length(remDr$findElements("css selector", "button.confirm, button.cancel")) == 0) break
+        Sys.sleep(0.25)
+      }
       
       Output[[2]] <<- c(Output[[2]], "Gave Donation consent")
     }
@@ -428,14 +441,14 @@ SimulateChatDashboardParticipant <- function(url = "URL-TO-YOUR-SHINY-APP", # ur
     DataDonation()
     Output$Setup["time_finish"] <- Sys.time()
     
-    ### clicking "ok" on auto-removal message
+    ### clicking "ok" on confirmation message
     Sys.sleep(5)
     remDr$findElement("css selector", "button.confirm")$clickElement()
     Sys.sleep(3)
     
     #### CLOSING PROCESS #####
     
-    #### Logging every server-side message
+    #### Logging every server-side message for debugging
     #Output[[5]] <- tryCatch(
     #  remDr$log("browser"),
     #  error = function(e) list(message = paste("Browser logs not available:", e$message))
